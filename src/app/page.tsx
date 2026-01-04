@@ -8,21 +8,40 @@ import { AlertCircle } from 'lucide-react'
 export default function HomePage() {
   const router = useRouter()
   const [error, setError] = useState(false)
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Verificar se Supabase está configurado
-    if (!isSupabaseConfigured()) {
-      setError(true)
-      return
+    async function checkAuth() {
+      // Verificar se Supabase está configurado
+      if (!isSupabaseConfigured) {
+        setError(true)
+        setLoading(false)
+        return
+      }
+
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession()
+        
+        if (sessionError) {
+          console.error('Erro ao verificar sessão:', sessionError)
+          setError(true)
+          setLoading(false)
+          return
+        }
+
+        if (session) {
+          router.push('/dashboard')
+        } else {
+          router.push('/login')
+        }
+      } catch (err) {
+        console.error('Erro inesperado:', err)
+        setError(true)
+        setLoading(false)
+      }
     }
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) {
-        router.push('/dashboard')
-      } else {
-        router.push('/login')
-      }
-    })
+    checkAuth()
   }, [router])
 
   if (error) {
@@ -53,9 +72,13 @@ export default function HomePage() {
     )
   }
 
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-white">
-      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-900"></div>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-purple-50 to-white">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-900"></div>
+      </div>
+    )
+  }
+
+  return null
 }
